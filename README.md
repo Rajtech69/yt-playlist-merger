@@ -1,122 +1,136 @@
-# YT Playlist Merger & 1080p Render Engine
+# YouTube Playlist Merger & Timeline Studio
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![FFmpeg](https://img.shields.io/badge/FFmpeg-Hardware%20Accelerated-green.svg)](https://ffmpeg.org/)
-[![yt--dlp](https://img.shields.io/badge/yt--dlp-Latest-red.svg)](https://github.com/yt-dlp/yt-dlp)
+A desktop utility for downloading YouTube playlists, standardizing video clips to a uniform resolution (1080p Full HD by default), and merging them into a single continuous video. Supports extended duration rendering (such as 10-hour loops) and includes a browser-based multi-track timeline editor.
 
-A high-performance desktop suite to download complete YouTube playlists, standardize clips into **1080p Full HD** (or 4K/720p), and merge them into a single continuous video with support for **Multi-Hour Rendering** (up to 10–24 hours) and **100% Intact Intros**. Includes both a native Tkinter Desktop GUI and an interactive Visual Timeline Editor Studio.
+![YouTube Playlist Merger & Timeline Studio Preview](assets/preview.jpg)
 
 ---
 
-## 🌟 Key Features
+## Features
 
-1. **1080p Full HD Standardized Rendering**:
-   - Scales and pillarboxes/letterboxes clips to true **1920x1080** Full HD with 48kHz Stereo AAC audio.
-   - Eliminates black screens, stutter, or video freezes when mixing different source aspect ratios or resolutions.
-
-2. **Full Multi-Hour Render Engine**:
-   - **Full Natural Playlist Duration**: Merges all videos in a multi-hour playlist from start to finish (supports 10+ hours).
-   - **10-Hour Loop / Extend Mode**: Seamlessly extends / loops any sequence (e.g., 19-minute playlist or 1-hour lofi music) into a full **10:00:00 (10-Hour)** continuous render.
-   - **Custom Duration**: Specify any target duration in hours (e.g. 2 hours, 8 hours, 10 hours).
-
-3. **Intact Intros by Default ("No Trimming")**:
-   - Video intros are preserved with 100% integrity (Intro Trim is disabled by default).
-   - Optional intro skip slider (1-120 seconds) is available if you explicitly want to skip repetitious intros.
-
-4. **Hardware Acceleration Engine**:
-   - Auto-detects GPU hardware encoders (`h264_nvenc` for NVIDIA, `h264_qsv` for Intel, `h264_amf` for AMD, `h264_mf` for Windows Media Foundation) with automatic fallback to multi-core CPU `libx264`.
-   - 64-bit MP4 muxing with `-movflags +faststart` ensures 20GB+ video files open instantly without player lag.
-
-5. **Visual Timeline Video Editor Studio**:
-   - Built-in multi-track timeline web editor (`editor_backend.py` + `editor_ui.html`) for precise trimming, speed control, volume adjustments, and custom sequencing.
-
-6. **Full Playlist Extraction**:
-   - Automatically cleans watch URLs containing `&list=...` into playlist URLs so `yt-dlp` downloads all items without stopping early.
+- **Standardized Video Normalization**: Scales and pads input clips to a uniform resolution (1920x1080 by default, with support for 720p, 4K, and 480p). Prevents aspect ratio distortion and video freezes when stitching mixed-source clips.
+- **Unified Audio Resampling**: Re-samples all audio tracks to 48kHz stereo AAC using `aresample=async=1000` to prevent audio/video drift across multi-hour outputs.
+- **Hardware-Accelerated Encoding**: Automatically probes and selects available hardware encoders (`h264_nvenc` for Nvidia, `h264_qsv` for Intel, `h264_amf` for AMD, or `h264_mf` on Windows) before falling back to CPU `libx264`.
+- **Flexible Duration Modes**:
+  - *Natural Duration*: Merges all downloaded playlist videos in order from start to finish.
+  - *Target Duration (Loop Mode)*: Loops and extends shorter sequences (e.g., a 20-minute track) to reach target lengths such as 1 hour, 8 hours, or 10 hours.
+- **Intro Trimming Control**: Intros remain 100% intact by default. An optional trim slider allows skipping repetitious introductory segments (1 to 120 seconds) when desired.
+- **Visual Timeline Editor Studio**: An integrated local web studio running on `http://localhost:7860` for multi-track timeline arrangement, clip trimming, speed changes, and volume adjustments.
+- **Playlist Extraction**: Automatically cleans watch URLs containing `&list=` parameters to download entire playlists rather than single videos.
 
 ---
 
-## 📁 Repository Structure
+## Prerequisites
 
-```
-yt-playlist-merger/
-├── main.py                   # Desktop Tkinter GUI application
-├── video_processor.py        # FFmpeg video normalization & concat engine
-├── downloader.py             # yt-dlp playlist extraction & download pipeline
-├── editor_backend.py         # Visual Studio local backend server (secure HTTP)
-├── editor_ui.html            # Web-based multi-track timeline video editor
-├── install_deps.bat          # Automated dependency installation script
-├── run.bat                   # Desktop app launcher
-├── run_timeline_editor.bat   # Timeline Studio launcher
-├── requirements.txt          # Python dependencies
-├── .env.example              # Example environment configuration
-├── .gitignore                # Production ignore rules (prevents large video commits)
-├── .gitattributes           # Cross-platform line ending normalization
-├── LICENSE                   # MIT License
-├── SECURITY.md               # Responsible security policy
-└── README.md                 # Project documentation
-```
+- **Python**: 3.8 or newer.
+- **FFmpeg**: Installed and available in your system `PATH`, or located in `C:\ffmpeg\bin`.
+- **yt-dlp**: Installed via pip (or using the included batch file).
 
 ---
 
-## 📋 Requirements
+## Installation
 
-1. **Python 3.8+** (Installed & accessible via `py` or `python`)
-2. **FFmpeg** (Included in `C:\ffmpeg\bin` or configured in system `PATH`)
-3. **yt-dlp** (Run `install_deps.bat` or `pip install -r requirements.txt`)
+Clone the repository:
 
----
-
-## 🚀 Quick Start
-
-### 1. Installation
-Clone the repository and install dependencies:
 ```bash
 git clone https://github.com/Rajtech69/yt-playlist-merger.git
 cd yt-playlist-merger
-install_deps.bat
-# Or manually:
+```
+
+Install dependencies:
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Launching Desktop GUI
-Double-click **`run.bat`** (or execute `py main.py`):
-1. Paste your YouTube Playlist URL.
-2. Choose your Output folder and filename.
-3. Select **1080p Full HD** (selected by default).
-4. Choose your output duration:
-   - **Natural Playlist Duration** to merge all videos as-is.
-   - **★ 10 Hours Full Render** to loop/extend the video to 10 hours.
-5. Click **▶ Start 1080p Merge & Render**.
-6. Once finished, click **📂 Open Output Folder** to access your merged video.
-
-### 3. Launching Visual Timeline Studio
-Double-click **`run_timeline_editor.bat`** (or execute `py editor_backend.py`):
-- Automatically opens your browser at `http://localhost:7860`.
-- Allows multi-track visual editing, clip trimming, and custom rendering.
+On Windows, you can also run `install_deps.bat`.
 
 ---
 
-## 🔒 Security & Privacy
+## Usage
 
-- **Zero Secrets / Tokens**: No API keys or credentials required or stored.
-- **Local Isolation**: Web services bind strictly to `127.0.0.1` and enforce local-origin CORS checks.
-- **Safe Command Execution**: FFmpeg subprocesses run via structured argument lists (no shell injection risk).
-- **Git Protection**: All temporary videos, downloads, and output renders (`*.mp4`, `test_output/`, `editor_media/`) are ignored by `.gitignore` to keep git repositories lightweight and under GitHub limits.
+### 1. Desktop GUI (Tkinter)
+
+Run the desktop application:
+
+```bash
+python main.py
+```
+
+Or double-click `run.bat` on Windows.
+
+1. Paste the YouTube playlist URL into the input field.
+2. Select an output directory and filename.
+3. Choose your desired target resolution (1080p, 720p, 4K, or 480p).
+4. Select the duration mode (Natural Playlist Length or Specific Duration loop).
+5. Click "Start 1080p Merge & Render".
+
+### 2. Visual Timeline Studio (Web Interface)
+
+Run the local web studio backend:
+
+```bash
+python editor_backend.py
+```
+
+Or double-click `run_timeline_editor.bat` on Windows.
+
+Once running:
+- Open your browser to `http://localhost:7860`.
+- Paste playlist links to import assets directly into the media bin.
+- Drag clips onto the timeline, trim handles, set volume and playback speeds, and click export.
 
 ---
 
-## 🛠️ Troubleshooting
+## Technical Details
 
-| Issue | Solution |
-|---|---|
-| `Only 1 video downloaded` | The app automatically cleans URLs to download the full playlist. |
-| `Audio out of sync on long videos` | Built-in 48kHz audio resampling (`aresample=async=1000`) keeps audio synced across 10+ hours. |
-| `Out of disk space during render` | Ensure at least 15–25 GB free space on your chosen drive for 10-hour 1080p files. |
-| `FFmpeg not found` | Place FFmpeg in `C:\ffmpeg\bin` or add its `bin` folder to your Windows system `PATH`. |
+### FFmpeg Pipeline
+
+The processing pipeline runs in two distinct stages:
+
+1. **Clip Standardization**: Each source clip is normalized individually to match target parameters:
+   - Video filter: `scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=30,format=yuv420p`
+   - Audio filter: `aresample=async=1000,asetpts=PTS-STARTPTS`
+   - Container settings: `-movflags +faststart` to place the moov atom at the beginning of the file for instant playback.
+
+2. **Stream-Copy Concatenation**: Once clips share identical codecs, sample rates, and pixel formats, the final assembly uses FFmpeg's concat demuxer (`-c copy`) to merge segments without generational quality loss or re-encoding overhead.
 
 ---
 
-## 📄 License
+## Project Structure
+
+```
+yt-playlist-merger/
+├── assets/
+│   └── preview.jpg           # Application preview image
+├── downloader.py             # yt-dlp playlist extraction and download hooks
+├── editor_backend.py         # Local HTTP server and timeline rendering backend
+├── editor_ui.html            # Web-based multi-track timeline user interface
+├── install_deps.bat          # Dependency installer script for Windows
+├── main.py                   # Tkinter desktop application entry point
+├── requirements.txt          # Python requirements list
+├── run.bat                   # Desktop app launcher
+├── run_timeline_editor.bat   # Timeline Studio launcher
+├── video_processor.py        # FFmpeg video normalization and concat pipeline
+├── .env.example              # Optional environment variables template
+├── .gitattributes           # Git line-ending configuration
+├── .gitignore                # Git exclusions (videos, outputs, caches)
+├── LICENSE                   # MIT License
+├── README.md                 # Project documentation
+└── SECURITY.md               # Security policy
+```
+
+---
+
+## Troubleshooting
+
+- **Only one video downloads**: The URL parser automatically converts watch URLs with `list=` parameters to clean playlist URLs. Ensure your playlist is set to Unlisted or Public on YouTube.
+- **FFmpeg not found**: Ensure `ffmpeg.exe` and `ffprobe.exe` are in your system `PATH` or placed in `C:\ffmpeg\bin`.
+- **Audio desync on long renders**: Built-in 48kHz audio resampling (`aresample=async=1000`) prevents clock drift across multi-hour videos.
+- **Disk space requirements**: 10-hour 1080p files typically require between 15 GB and 25 GB of free drive space.
+
+---
+
+## License
 
 This project is licensed under the [MIT License](LICENSE).
