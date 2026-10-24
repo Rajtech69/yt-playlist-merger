@@ -97,12 +97,21 @@ The processing pipeline runs in two distinct stages:
 
 ---
 
+## Architecture & Workflow
+
+The processing engine follows a modular pipeline from playlist extraction to standardized video output:
+
+![Architecture and Workflow Diagram](assets/structure_diagram.jpg)
+
+---
+
 ## Project Structure
 
 ```
 yt-playlist-merger/
 ├── assets/
-│   └── preview.jpg           # Application preview image
+│   ├── preview.jpg           # Application preview image
+│   └── structure_diagram.jpg # Doodle-style architecture workflow diagram
 ├── downloader.py             # yt-dlp playlist extraction and download hooks
 ├── editor_backend.py         # Local HTTP server and timeline rendering backend
 ├── editor_ui.html            # Web-based multi-track timeline user interface
