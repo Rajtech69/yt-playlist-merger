@@ -1,0 +1,18 @@
+# Set default behaviour to automatically normalize line endings
+* text=auto
+
+# Python, HTML, Markdown, and config files normalize to LF
+*.py text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# Batch scripts on Windows must use CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf

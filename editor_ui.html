@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timeline Video Editor Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .clip-handle {
+      position: absolute;
+      top: 0; bottom: 0; width: 8px;
+      cursor: ew-resize;
+      opacity: 0.7;
+    }
+    .clip-handle:hover { opacity: 1; background: rgba(255,255,255,0.4); }
+    .clip-handle-left { left: 0; border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
+    .clip-handle-right { right: 0; border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col select-none overflow-hidden">
+
+  <!-- Top Navigation / Studio Toolbar -->
+  <header class="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-5 z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-pink-500 to-rose-600 flex items-center justify-center shadow-lg shadow-pink-500/30">
+        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-11zm2.5-.5a.5.5 0 0 0-.5.5v11a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5v-11a.5.5 0 0 0-.5-.5h-11z"/><path d="M9.5 8.5v7l6-3.5-6-3.5z"/></svg>
+      </div>
+      <div>
+        <h1 class="text-sm font-bold tracking-wide">STUDIO TIMELINE EDITOR</h1>
+        <p class="text-[10px] text-slate-400">1080p Full HD · Multi-Track · Hardware GPU Render</p>
+      </div>
+    </div>
+
+    <!-- Center Playhead Timecode -->
+    <div class="flex items-center gap-3 bg-slate-950 px-4 py-1.5 rounded-lg border border-slate-800">
+      <span class="text-xs text-slate-400">PLAYHEAD</span>
+      <span id="timecodeDisplay" class="font-mono text-sm font-bold text-pink-400">00:00:00.00</span>
+      <span class="text-xs text-slate-500">/</span>
+      <span id="durationDisplay" class="font-mono text-xs text-slate-400">00:00:00.00</span>
+    </div>
+
+    <!-- Right Controls: Zoom & Export -->
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1 rounded-lg border border-slate-700 text-xs">
+        <span class="text-slate-400">Zoom</span>
+        <input type="range" id="zoomSlider" min="20" max="200" value="80" class="w-20 accent-pink-500 cursor-pointer">
+      </div>
+
+      <button id="snapToggleBtn" onclick="toggleSnap()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white flex items-center gap-1.5 transition">
+        <span id="snapIndicator" class="w-2 h-2 rounded-full bg-emerald-400"></span> Magnet Snap
+      </button>
+
+      <button onclick="openExportModal()" class="px-4 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white shadow-lg shadow-pink-500/20 flex items-center gap-1.5 transition cursor-pointer">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        EXPORT 1080p
+      </button>
+    </div>
+  </header>
+
+  <!-- Middle Studio Area (Media Bin + Preview Player + Inspector) -->
+  <main class="flex-1 flex overflow-hidden">
+
+    <!-- Left Panel: Media Bin & YouTube Downloader (320px) -->
+    <aside class="w-80 bg-slate-900/90 border-r border-slate-800 flex flex-col">
+      <!-- Media Bin Tabs -->
+      <div class="p-3 border-b border-slate-800">
+        <h2 class="text-xs font-bold text-slate-300 mb-2 uppercase tracking-wider">📁 Project Media Bin</h2>
+        <!-- YouTube Import Bar -->
+        <div class="flex gap-1.5 mb-2">
+          <input type="text" id="ytUrlInput" placeholder="Paste YouTube Playlist / Video URL..." class="flex-1 bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-pink-500 font-mono">
+          <button onclick="importFromYouTube()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded transition flex items-center gap-1">
+            📥 Import
+          </button>
+        </div>
+        <p id="ytStatusMsg" class="text-[11px] text-slate-400 hidden"></p>
+      </div>
+
+      <!-- Media List -->
+      <div id="mediaList" class="flex-1 overflow-y-auto p-3 space-y-2">
+        <div class="text-center py-10 text-slate-500 text-xs">
+          <svg class="w-8 h-8 mx-auto mb-2 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+          No media in project yet.<br>Paste a YouTube URL above to import.
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center: Preview Player & Canvas -->
+    <section class="flex-1 bg-slate-950 flex flex-col items-center justify-center p-4 border-r border-slate-800 relative">
+      <!-- 16:9 Aspect Video Player Canvas -->
+      <div class="w-full max-w-3xl aspect-video bg-black rounded-xl overflow-hidden border border-slate-800 shadow-2xl relative flex items-center justify-center group">
+        <video id="previewVideo" class="w-full h-full object-contain bg-black" preload="auto"></video>
+        <canvas id="previewOverlayCanvas" class="absolute inset-0 pointer-events-none"></canvas>
+
+        <!-- Centered Big Play Overlay Button on hover -->
+        <button onclick="togglePlay()" class="absolute w-14 h-14 rounded-full bg-pink-500/80 hover:bg-pink-500 text-white flex items-center justify-center shadow-lg transition opacity-0 group-hover:opacity-100">
+          <svg id="bigPlayIcon" class="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+      </div>
+
+      <!-- Player Controls Toolbar -->
+      <div class="flex items-center gap-4 mt-3 bg-slate-900/80 px-6 py-2 rounded-xl border border-slate-800 text-slate-300">
+        <button onclick="stepFrame(-5)" title="Rewind 5s (J)" class="hover:text-pink-400 transition p-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z"/></svg>
+        </button>
+        <button onclick="stepFrame(-1/30)" title="Step 1 Frame Back (Left Arrow)" class="hover:text-pink-400 transition p-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+
+        <button onclick="togglePlay()" id="playPauseBtn" class="w-10 h-10 rounded-full bg-pink-500 hover:bg-pink-600 text-white flex items-center justify-center shadow-md transition">
+          <svg id="playIcon" class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+
+        <button onclick="stepFrame(1/30)" title="Step 1 Frame Forward (Right Arrow)" class="hover:text-pink-400 transition p-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </button>
+        <button onclick="stepFrame(5)" title="Forward 5s (L)" class="hover:text-pink-400 transition p-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- Right Panel: Clip Inspector / Properties (260px) -->
+    <aside class="w-72 bg-slate-900/90 border-l border-slate-800 p-4 flex flex-col">
+      <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">⚙️ Clip Inspector</h2>
+
+      <div id="inspectorEmpty" class="text-center py-12 text-slate-500 text-xs">
+        Click any clip on the timeline to inspect & adjust its speed, volume, and cuts.
+      </div>
+
+      <div id="inspectorContent" class="hidden space-y-4 text-xs">
+        <div>
+          <label class="text-slate-400 block mb-1">Clip Name</label>
+          <input type="text" id="inspClipName" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200" readonly>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-slate-400 block mb-1">Trim In (s)</label>
+            <input type="number" id="inspTrimStart" step="0.1" min="0" onchange="updateSelectedClipProperties()" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-slate-200 font-mono">
+          </div>
+          <div>
+            <label class="text-slate-400 block mb-1">Duration (s)</label>
+            <input type="number" id="inspDuration" step="0.1" min="0.1" onchange="updateSelectedClipProperties()" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-slate-200 font-mono">
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between mb-1">
+            <label class="text-slate-400">Speed Multiplier</label>
+            <span id="inspSpeedLabel" class="text-pink-400 font-bold">1.0x</span>
+          </div>
+          <input type="range" id="inspSpeed" min="0.25" max="4.0" step="0.25" value="1.0" oninput="updateSelectedClipProperties()" class="w-full accent-pink-500 cursor-pointer">
+        </div>
+
+        <div>
+          <div class="flex justify-between mb-1">
+            <label class="text-slate-400">Audio Volume</label>
+            <span id="inspVolumeLabel" class="text-pink-400 font-bold">100%</span>
+          </div>
+          <input type="range" id="inspVolume" min="0" max="200" step="5" value="100" oninput="updateSelectedClipProperties()" class="w-full accent-pink-500 cursor-pointer">
+        </div>
+
+        <div class="pt-4 border-t border-slate-800 space-y-2">
+          <button onclick="splitSelectedClipAtPlayhead()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded font-semibold flex items-center justify-center gap-1.5 transition">
+            ✂️ Split at Playhead (S)
+          </button>
+          <button onclick="deleteSelectedClip()" class="w-full py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded font-semibold flex items-center justify-center gap-1.5 transition">
+            🗑️ Delete Clip (Del)
+          </button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Bottom Visual Multi-Track Timeline (320px) -->
+  <footer class="h-80 bg-slate-900 border-t border-slate-800 flex flex-col z-10">
+
+    <!-- Timeline Action Header -->
+    <div class="h-10 bg-slate-950 border-b border-slate-800 flex items-center justify-between px-4">
+      <div class="flex items-center gap-2">
+        <button onclick="splitSelectedClipAtPlayhead()" title="Split clip at playhead (S)" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded flex items-center gap-1">
+          ✂️ <span>Split (S)</span>
+        </button>
+        <button onclick="deleteSelectedClip()" title="Delete selected clip (Del)" class="px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded flex items-center gap-1">
+          🗑️ <span>Delete</span>
+        </button>
+      </div>
+
+      <div class="text-[11px] text-slate-400 font-mono">
+        Tracks: <span class="text-pink-400">V1 (Main Video)</span> · <span class="text-cyan-400">V2 (Overlay)</span> · <span class="text-emerald-400">A1 (Audio)</span>
+      </div>
+    </div>
+
+    <!-- Scrollable Multi-Track Container -->
+    <div id="timelineScrollContainer" class="flex-1 overflow-x-auto overflow-y-auto relative bg-slate-950">
+
+      <!-- Ruler Row -->
+      <div id="timelineRuler" class="h-6 bg-slate-900 border-b border-slate-800 sticky top-0 z-20 flex cursor-pointer relative" style="width: 5000px;" onclick="seekTimelineFromRuler(event)">
+        <!-- Dynamic second ticks will be drawn via JS -->
+      </div>
+
+      <!-- Tracks Container -->
+      <div id="tracksContainer" class="relative" style="width: 5000px; min-height: 220px;">
+
+        <!-- Vertical Playhead Needle -->
+        <div id="playhead" class="absolute top-0 bottom-0 w-0.5 bg-pink-500 z-30 pointer-events-none" style="left: 0px;">
+          <div class="w-3 h-3 bg-pink-500 rotate-45 -ml-[5px] -mt-1 shadow-md shadow-pink-500/50"></div>
+        </div>
+
+        <!-- Track V1: Video Track -->
+        <div class="h-20 border-b border-slate-800/80 relative flex items-center px-2 bg-slate-900/30" id="track-v1" data-track="v1">
+          <div class="absolute left-2 text-[10px] font-bold text-pink-400 uppercase tracking-wider pointer-events-none opacity-60">V1 Video</div>
+          <div class="clips-container absolute inset-0"></div>
+        </div>
+
+        <!-- Track V2: Overlay Video Track -->
+        <div class="h-20 border-b border-slate-800/80 relative flex items-center px-2 bg-slate-900/20" id="track-v2" data-track="v2">
+          <div class="absolute left-2 text-[10px] font-bold text-cyan-400 uppercase tracking-wider pointer-events-none opacity-60">V2 Overlay</div>
+          <div class="clips-container absolute inset-0"></div>
+        </div>
+
+        <!-- Track A1: Audio Track -->
+        <div class="h-16 border-b border-slate-800/80 relative flex items-center px-2 bg-slate-900/40" id="track-a1" data-track="a1">
+          <div class="absolute left-2 text-[10px] font-bold text-emerald-400 uppercase tracking-wider pointer-events-none opacity-60">A1 Audio</div>
+          <div class="clips-container absolute inset-0"></div>
+        </div>
+
+      </div>
+    </div>
+  </footer>
+
+  <!-- Export Modal -->
+  <div id="exportModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          🚀 Export Timeline Video
+        </h3>
+        <button onclick="closeExportModal()" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="text-slate-400 block mb-1">Resolution Preset</label>
+          <select id="exportResolution" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200">
+            <option value="1080" selected>1080p Full HD (1920x1080) — Recommended</option>
+            <option value="4k">4K Ultra HD (3840x2160)</option>
+            <option value="720">720p HD (1280x720)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-slate-400 block mb-1">Output File Destination</label>
+          <input type="text" id="exportOutputPath" value="timeline_edited_video.mp4" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 font-mono">
+        </div>
+
+        <!-- Render Progress Bar -->
+        <div id="renderProgressSection" class="hidden space-y-2 pt-2">
+          <div class="flex justify-between text-[11px]">
+            <span id="renderStatusText" class="text-slate-300">Rendering...</span>
+            <span id="renderPercentText" class="text-pink-400 font-bold font-mono">0%</span>
+          </div>
+          <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+            <div id="renderProgressBar" class="bg-gradient-to-r from-pink-500 to-rose-600 h-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+        <button onclick="closeExportModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg">
+          Cancel
+        </button>
+        <button id="startRenderBtn" onclick="startRender()" class="px-5 py-2 bg-pink-500 hover:bg-pink-600 text-white text-xs font-bold rounded-lg shadow-lg shadow-pink-500/20">
+          ▶ Start Render
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Javascript Studio Timeline Engine -->
+  <script>
+    // State Model
+    const state = {
+      currentTime: 0.0,
+      zoomPxPerSec: 80, // pixels per second on timeline
+      isPlaying: false,
+      snapEnabled: true,
+      selectedClipId: null,
+      tracks: {
+        v1: { id: "v1", type: "video", clips: [] },
+        v2: { id: "v2", type: "video", clips: [] },
+        a1: { id: "a1", type: "audio", clips: [] }
+      },
+      mediaLibrary: []
+    };
+
+    let playInterval = null;
+    const previewVideo = document.getElementById("previewVideo");
+
+    // Initialize
+    window.addEventListener("DOMContentLoaded", () => {
+      fetchMediaLibrary();
+      drawTimelineRuler();
+      setupKeyboardShortcuts();
+      setupZoom();
+    });
+
+    // Fetch Media Bin
+    async function fetchMediaLibrary() {
+      try {
+        const res = await fetch("/api/media");
+        const data = await res.json();
+        state.mediaLibrary = data.media || [];
+        renderMediaBin();
+      } catch (e) {
+        console.error("Failed to load media bin", e);
+      }
+    }
+
+    function renderMediaBin() {
+      const container = document.getElementById("mediaList");
+      if (!state.mediaLibrary.length) {
+        container.innerHTML = `
+          <div class="text-center py-10 text-slate-500 text-xs">
+            No media in project yet.<br>Paste a YouTube URL above to import.
+          </div>`;
+        return;
+      }
+      container.innerHTML = state.mediaLibrary.map((m, idx) => `
+        <div class="p-2.5 bg-slate-950 hover:bg-slate-800/80 border border-slate-800 rounded-lg flex items-center justify-between group transition">
+          <div class="flex items-center gap-2 overflow-hidden">
+            <div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-pink-400 font-bold text-xs shrink-0">
+              🎬
+            </div>
+            <div class="overflow-hidden">
+              <h4 class="text-xs font-semibold text-slate-200 truncate" title="${m.name}">${m.name}</h4>
+              <span class="text-[10px] text-slate-400 font-mono">${m.formatted_duration} · ${m.width}x${m.height}</span>
+            </div>
+          </div>
+          <button onclick="addMediaToTimeline('${m.name}', ${m.duration})" class="px-2 py-1 bg-pink-500/20 hover:bg-pink-500 text-pink-300 hover:text-white rounded text-[11px] font-bold shrink-0 transition">
+            + Add
+          </button>
+        </div>
+      `).join("");
+    }
+
+    async function importFromYouTube() {
+      const input = document.getElementById("ytUrlInput");
+      const url = input.value.trim();
+      if (!url) return;
+      const status = document.getElementById("ytStatusMsg");
+      status.classList.remove("hidden");
+      status.innerText = "⏳ Downloading YouTube video in 1080p...";
+      try {
+        await fetch("/api/download-yt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url })
+        });
+        status.innerText = "Download started! It will appear in media bin shortly.";
+        setTimeout(fetchMediaLibrary, 5000);
+      } catch (e) {
+        status.innerText = "Error importing YouTube URL.";
+      }
+    }
+
+    // Timeline Clip Management
+    function addMediaToTimeline(name, duration) {
+      // Find end of last clip on track v1
+      const v1Clips = state.tracks.v1.clips;
+      let start = 0;
+      if (v1Clips.length > 0) {
+        const last = v1Clips[v1Clips.length - 1];
+        start = last.start + last.duration;
+      }
+
+      const clip = {
+        id: "clip_" + Date.now() + "_" + Math.floor(Math.random()*1000),
+        name: name,
+        src: name,
+        track: "v1",
+        start: start,
+        duration: duration,
+        trimStart: 0,
+        speed: 1.0,
+        volume: 1.0
+      };
+
+      state.tracks.v1.clips.push(clip);
+      renderTimelineClips();
+      updateProjectDuration();
+      selectClip(clip.id);
+    }
+
+    function renderTimelineClips() {
+      ["v1", "v2", "a1"].forEach(trackId => {
+        const container = document.querySelector(`#track-${trackId} .clips-container`);
+        container.innerHTML = "";
+        const clips = state.tracks[trackId].clips;
+
+        clips.forEach(clip => {
+          const leftPx = clip.start * state.zoomPxPerSec;
+          const widthPx = clip.duration * state.zoomPxPerSec;
+
+          const isSelected = (state.selectedClipId === clip.id);
+          const colorBg = trackId === "a1" ? "bg-emerald-950/80 border-emerald-500/50" : (trackId === "v2" ? "bg-cyan-950/80 border-cyan-500/50" : "bg-pink-950/80 border-pink-500/50");
+          const selectedRing = isSelected ? "ring-2 ring-white z-10 shadow-lg shadow-pink-500/30" : "";
+
+          const el = document.createElement("div");
+          el.className = `absolute top-1 bottom-1 ${colorBg} ${selectedRing} border rounded-lg overflow-hidden flex items-center justify-between px-2 cursor-pointer transition-shadow`;
+          el.style.left = `${leftPx}px`;
+          el.style.width = `${Math.max(20, widthPx)}px`;
+          el.dataset.id = clip.id;
+
+          el.innerHTML = `
+            <div class="clip-handle clip-handle-left bg-white/20" onmousedown="startTrim(event, '${clip.id}', 'left')"></div>
+            <div class="overflow-hidden pointer-events-none">
+              <span class="text-[11px] font-bold text-slate-100 truncate block">${clip.name}</span>
+              <span class="text-[9px] text-slate-400 font-mono">${clip.duration.toFixed(1)}s</span>
+            </div>
+            <div class="clip-handle clip-handle-right bg-white/20" onmousedown="startTrim(event, '${clip.id}', 'right')"></div>
+          `;
+
+          el.onclick = (e) => {
+            e.stopPropagation();
+            selectClip(clip.id);
+          };
+
+          container.appendChild(el);
+        });
+      });
+    }
+
+    function selectClip(clipId) {
+      state.selectedClipId = clipId;
+      renderTimelineClips();
+
+      let found = null;
+      ["v1", "v2", "a1"].forEach(t => {
+        const c = state.tracks[t].clips.find(x => x.id === clipId);
+        if (c) found = c;
+      });
+
+      const empty = document.getElementById("inspectorEmpty");
+      const content = document.getElementById("inspectorContent");
+
+      if (found) {
+        empty.classList.add("hidden");
+        content.classList.remove("hidden");
+
+        document.getElementById("inspClipName").value = found.name;
+        document.getElementById("inspTrimStart").value = found.trimStart.toFixed(1);
+        document.getElementById("inspDuration").value = found.duration.toFixed(1);
+        document.getElementById("inspSpeed").value = found.speed;
+        document.getElementById("inspSpeedLabel").innerText = found.speed + "x";
+        document.getElementById("inspVolume").value = found.volume * 100;
+        document.getElementById("inspVolumeLabel").innerText = (found.volume * 100) + "%";
+      } else {
+        empty.classList.remove("hidden");
+        content.classList.add("hidden");
+      }
+    }
+
+    function updateSelectedClipProperties() {
+      if (!state.selectedClipId) return;
+      let found = null;
+      ["v1", "v2", "a1"].forEach(t => {
+        const c = state.tracks[t].clips.find(x => x.id === state.selectedClipId);
+        if (c) found = c;
+      });
+      if (!found) return;
+
+      found.trimStart = parseFloat(document.getElementById("inspTrimStart").value) || 0;
+      found.duration = parseFloat(document.getElementById("inspDuration").value) || 1;
+      found.speed = parseFloat(document.getElementById("inspSpeed").value) || 1;
+      document.getElementById("inspSpeedLabel").innerText = found.speed + "x";
+      found.volume = (parseFloat(document.getElementById("inspVolume").value) || 100) / 100;
+      document.getElementById("inspVolumeLabel").innerText = Math.round(found.volume * 100) + "%";
+
+      renderTimelineClips();
+      updateProjectDuration();
+    }
+
+    // Trimming Handles
+    function startTrim(e, clipId, handleType) {
+      e.stopPropagation();
+      const startX = e.clientX;
+      let found = null;
+      ["v1", "v2", "a1"].forEach(t => {
+        const c = state.tracks[t].clips.find(x => x.id === clipId);
+        if (c) found = c;
+      });
+      if (!found) return;
+
+      const initialStart = found.start;
+      const initialDur = found.duration;
+      const initialTrimStart = found.trimStart;
+
+      function onMouseMove(moveEvent) {
+        const dx = moveEvent.clientX - startX;
+        const dt = dx / state.zoomPxPerSec;
+
+        if (handleType === "left") {
+          const newStart = Math.max(0, initialStart + dt);
+          const newDur = Math.max(0.2, initialDur - dt);
+          found.start = newStart;
+          found.duration = newDur;
+          found.trimStart = initialTrimStart + (newStart - initialStart);
+        } else {
+          found.duration = Math.max(0.2, initialDur + dt);
+        }
+        renderTimelineClips();
+        updateProjectDuration();
+        selectClip(clipId);
+      }
+
+      function onMouseUp() {
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+      }
+
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    }
+
+    // Split Clip (Razor Tool)
+    function splitSelectedClipAtPlayhead() {
+      if (!state.selectedClipId) return;
+      let foundTrack = null;
+      let foundClip = null;
+      ["v1", "v2", "a1"].forEach(t => {
+        const c = state.tracks[t].clips.find(x => x.id === state.selectedClipId);
+        if (c) { foundTrack = t; foundClip = c; }
+      });
+
+      if (!foundClip) return;
+      const cur = state.currentTime;
+      if (cur <= foundClip.start || cur >= foundClip.start + foundClip.duration) {
+        alert("Move the playhead inside the selected clip to split it!");
+        return;
+      }
+
+      const offset = cur - foundClip.start;
+      const firstDur = offset;
+      const secondDur = foundClip.duration - offset;
+
+      // Update first clip
+      foundClip.duration = firstDur;
+
+      // Create second clip
+      const secondClip = {
+        id: "clip_" + Date.now() + "_" + Math.floor(Math.random()*1000),
+        name: foundClip.name,
+        src: foundClip.src,
+        track: foundTrack,
+        start: cur,
+        duration: secondDur,
+        trimStart: foundClip.trimStart + offset,
+        speed: foundClip.speed,
+        volume: foundClip.volume
+      };
+
+      state.tracks[foundTrack].clips.push(secondClip);
+      renderTimelineClips();
+      selectClip(secondClip.id);
+    }
+
+    function deleteSelectedClip() {
+      if (!state.selectedClipId) return;
+      ["v1", "v2", "a1"].forEach(t => {
+        state.tracks[t].clips = state.tracks[t].clips.filter(x => x.id !== state.selectedClipId);
+      });
+      state.selectedClipId = null;
+      renderTimelineClips();
+      selectClip(null);
+      updateProjectDuration();
+    }
+
+    // Playhead & Playback
+    function seekTo(timeSec) {
+      state.currentTime = Math.max(0, timeSec);
+      document.getElementById("timecodeDisplay").innerText = formatSeconds(state.currentTime);
+
+      const playhead = document.getElementById("playhead");
+      playhead.style.left = `${state.currentTime * state.zoomPxPerSec}px`;
+
+      // Update preview video if active clip exists at playhead
+      syncPreviewPlayer();
+    }
+
+    function seekTimelineFromRuler(e) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const time = x / state.zoomPxPerSec;
+      seekTo(time);
+    }
+
+    function syncPreviewPlayer() {
+      let activeClip = null;
+      ["v1", "v2"].forEach(t => {
+        const c = state.tracks[t].clips.find(x => state.currentTime >= x.start && state.currentTime < x.start + x.duration);
+        if (c) activeClip = c;
+      });
+
+      if (activeClip) {
+        const expectedSrc = `/media/${encodeURIComponent(activeClip.src)}`;
+        if (!previewVideo.src.includes(encodeURIComponent(activeClip.src))) {
+          previewVideo.src = expectedSrc;
+        }
+        const internalTime = (state.currentTime - activeClip.start) * activeClip.speed + activeClip.trimStart;
+        if (Math.abs(previewVideo.currentTime - internalTime) > 0.3) {
+          previewVideo.currentTime = internalTime;
+        }
+      }
+    }
+
+    function togglePlay() {
+      state.isPlaying = !state.isPlaying;
+      const icon = document.getElementById("playIcon");
+      const bigIcon = document.getElementById("bigPlayIcon");
+
+      if (state.isPlaying) {
+        icon.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
+        bigIcon.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
+        playInterval = setInterval(() => {
+          seekTo(state.currentTime + 0.05);
+        }, 50);
+      } else {
+        icon.innerHTML = `<path d="M8 5v14l11-7z"/>`;
+        bigIcon.innerHTML = `<path d="M8 5v14l11-7z"/>`;
+        clearInterval(playInterval);
+      }
+    }
+
+    function stepFrame(deltaSec) {
+      if (state.isPlaying) togglePlay();
+      seekTo(state.currentTime + deltaSec);
+    }
+
+    function formatSeconds(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      const ms = Math.floor((sec % 1) * 100);
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(2, '0')}`;
+    }
+
+    function updateProjectDuration() {
+      let maxDur = 0;
+      ["v1", "v2", "a1"].forEach(t => {
+        state.tracks[t].clips.forEach(c => {
+          maxDur = Math.max(maxDur, c.start + c.duration);
+        });
+      });
+      document.getElementById("durationDisplay").innerText = formatSeconds(maxDur);
+    }
+
+    function drawTimelineRuler() {
+      const ruler = document.getElementById("timelineRuler");
+      ruler.innerHTML = "";
+      for (let s = 0; s < 300; s += 5) {
+        const left = s * state.zoomPxPerSec;
+        const mark = document.createElement("div");
+        mark.className = "absolute top-0 bottom-0 border-l border-slate-700 pl-1 text-[10px] text-slate-500 font-mono";
+        mark.style.left = `${left}px`;
+        mark.innerText = `${s}s`;
+        ruler.appendChild(mark);
+      }
+    }
+
+    function setupZoom() {
+      const slider = document.getElementById("zoomSlider");
+      slider.oninput = (e) => {
+        state.zoomPxPerSec = parseInt(e.target.value);
+        drawTimelineRuler();
+        renderTimelineClips();
+        seekTo(state.currentTime);
+      };
+    }
+
+    function toggleSnap() {
+      state.snapEnabled = !state.snapEnabled;
+      document.getElementById("snapIndicator").className = `w-2 h-2 rounded-full ${state.snapEnabled ? 'bg-emerald-400' : 'bg-slate-600'}`;
+    }
+
+    function setupKeyboardShortcuts() {
+      window.addEventListener("keydown", (e) => {
+        if (e.target.tagName === "INPUT") return;
+        if (e.code === "Space") { e.preventDefault(); togglePlay(); }
+        else if (e.code === "KeyS") { splitSelectedClipAtPlayhead(); }
+        else if (e.code === "Delete" || e.code === "Backspace") { deleteSelectedClip(); }
+        else if (e.code === "ArrowLeft") { stepFrame(-1/30); }
+        else if (e.code === "ArrowRight") { stepFrame(1/30); }
+      });
+    }
+
+    // Export Modal & Pipeline
+    function openExportModal() {
+      document.getElementById("exportModal").classList.remove("hidden");
+    }
+
+    function closeExportModal() {
+      document.getElementById("exportModal").classList.add("hidden");
+    }
+
+    async function startRender() {
+      const resolution = document.getElementById("exportResolution").value;
+      const outputPath = document.getElementById("exportOutputPath").value;
+
+      const projectData = {
+        resolution: resolution,
+        fps: 30,
+        outputPath: outputPath,
+        tracks: Object.values(state.tracks)
+      };
+
+      document.getElementById("renderProgressSection").classList.remove("hidden");
+      document.getElementById("startRenderBtn").disabled = true;
+
+      try {
+        await fetch("/api/render", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(projectData)
+        });
+
+        const poll = setInterval(async () => {
+          const res = await fetch("/api/render-status");
+          const data = await res.json();
+
+          document.getElementById("renderPercentText").innerText = data.progress + "%";
+          document.getElementById("renderProgressBar").style.width = data.progress + "%";
+          document.getElementById("renderStatusText").innerText = data.message || "Rendering...";
+
+          if (data.status === "done") {
+            clearInterval(poll);
+            document.getElementById("renderStatusText").innerText = "Render Complete!";
+            alert("Video successfully exported to: " + data.output_file);
+          } else if (data.status === "error") {
+            clearInterval(poll);
+            alert("Render error: " + data.error);
+          }
+        }, 1000);
+      } catch (e) {
+        alert("Export failed to start: " + e);
+      }
+    }
+  </script>
+</body>
+</html>
